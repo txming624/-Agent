@@ -1,0 +1,15 @@
+2024-01-15 10:15:23 [INFO] [app-server] Application started successfully on port 8080
+2024-01-15 10:15:24 [INFO] [app-server] Database connection pool initialized with max size 50
+2024-01-15 10:16:45 [INFO] [app-server] Processing request GET /api/users
+2024-01-15 10:16:46 [INFO] [app-server] Request completed in 120ms
+2024-01-15 10:17:30 [WARN] [app-server] Slow query detected: SELECT * FROM orders took 2500ms
+2024-01-15 10:18:15 [ERROR] [app-server] Connection pool exhausted: Cannot get a connection, pool error Timeout waiting for idle object
+2024-01-15 10:18:16 [ERROR] [app-server] Failed to process request POST /api/orders: java.sql.SQLException: Cannot get a connection
+2024-01-15 10:18:17 [ERROR] [app-server] Failed to process request GET /api/products: java.sql.SQLException: Cannot get a connection
+2024-01-15 10:18:18 [WARN] [app-server] Response time exceeded threshold: average 5000ms in last 1 minute
+2024-01-15 10:18:20 [ERROR] [app-server] HTTP 500 Internal Server Error for POST /api/orders
+2024-01-15 10:18:21 [ERROR] [app-server] HTTP 500 Internal Server Error for GET /api/products
+2024-01-15 10:18:25 [CRITICAL] [monitoring] Service health check failed: app-server is not responding
+2024-01-15 10:18:30 [ERROR] [app-server] OutOfMemoryError: Java heap space
+2024-01-15 10:18:31 [FATAL] [app-server] Application shutting down due to critical error
+2024-01-15 10:19:00 [INFO] [monitoring] Alert triggered: app-server down

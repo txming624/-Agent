@@ -1,0 +1,182 @@
+[
+  {
+    "id": "FAULT-001",
+    "title": "MySQL连接池耗尽导致服务不可用",
+    "category": "数据库",
+    "symptoms": [
+      "日志出现 'Cannot get a connection, pool error Timeout waiting for idle object'",
+      "服务响应时间急剧上升",
+      "大量请求超时",
+      "数据库连接数达到上限"
+    ],
+    "root_cause": "应用程序未正确释放数据库连接，或连接池配置过小，在高并发场景下连接池被耗尽。常见原因包括：事务未正确提交/回滚、连接泄漏、连接池maxActive设置过小。",
+    "solution": "1. 检查并修复代码中的连接泄漏问题，确保所有连接在finally块中关闭\n2. 调整连接池参数：maxActive=100, maxIdle=50, minIdle=10\n3. 添加连接池监控告警\n4. 配置连接超时时间 validationQuery",
+    "severity": "high",
+    "tags": ["mysql", "connection-pool", "timeout", "database"]
+  },
+  {
+    "id": "FAULT-002",
+    "title": "Redis内存溢出(OOM)导致数据丢失",
+    "category": "缓存",
+    "symptoms": [
+      "日志出现 'OOM command not allowed when used memory > maxmemory'",
+      "Redis写入操作失败",
+      "缓存命中率急剧下降",
+      "应用报错 'redis.exceptions.ResponseError'"
+    ],
+    "root_cause": "Redis使用内存超过maxmemory限制，且淘汰策略配置不当。可能原因：大Key未清理、过期时间设置不合理、maxmemory配置过小。",
+    "solution": "1. 执行 redis-cli info memory 查看内存使用情况\n2. 使用 redis-cli --bigkeys 扫描大Key\n3. 调整maxmemory参数，建议为物理内存的70%\n4. 配置合适的淘汰策略 allkeys-lru\n5. 为Key设置合理的TTL",
+    "severity": "high",
+    "tags": ["redis", "oom", "memory", "cache"]
+  },
+  {
+    "id": "FAULT-003",
+    "title": "Nginx 502 Bad Gateway",
+    "category": "Web服务器",
+    "symptoms": [
+      "用户访问返回502错误",
+      "Nginx日志出现 'upstream prematurely closed connection'",
+      "Nginx日志出现 'connect() failed (111: Connection refused)'",
+      "后端服务不可达"
+    ],
+    "root_cause": "Nginx无法与后端服务建立连接。常见原因：后端服务崩溃、后端服务端口未监听、防火墙规则阻止、upstream配置错误。",
+    "solution": "1. 检查后端服务是否正常运行: systemctl status <service>\n2. 检查端口监听: netstat -tlnp | grep <port>\n3. 检查Nginx upstream配置\n4. 检查防火墙规则: iptables -L\n5. 查看后端服务日志定位具体错误\n6. 如服务崩溃，执行重启: systemctl restart <service>",
+    "severity": "high",
+    "tags": ["nginx", "502", "gateway", "upstream"]
+  },
+  {
+    "id": "FAULT-004",
+    "title": "Kubernetes Pod CrashLoopBackOff",
+    "category": "容器",
+    "symptoms": [
+      "Pod状态显示 CrashLoopBackOff",
+      "kubectl describe pod 显示频繁重启",
+      "日志显示应用启动失败",
+      "容器退出码非0"
+    ],
+    "root_cause": "容器内应用反复崩溃重启。常见原因：应用配置错误、依赖服务不可用、资源限制过低(OOMKilled)、健康检查失败、镜像问题。",
+    "solution": "1. 查看Pod日志: kubectl logs <pod> --previous\n2. 查看Pod详情: kubectl describe pod <pod>\n3. 检查资源限制是否合理\n4. 检查ConfigMap/Secret配置\n5. 检查依赖服务是否就绪\n6. 临时增加restartPolicy调试\n7. 检查liveness/readiness probe配置",
+    "severity": "high",
+    "tags": ["kubernetes", "pod", "crash", "container"]
+  },
+  {
+    "id": "FAULT-005",
+    "title": "磁盘空间不足导致服务异常",
+    "category": "系统",
+    "symptoms": [
+      "日志写入失败 'No space left on device'",
+      "数据库无法写入",
+      "服务无法启动",
+      "df -h 显示使用率100%"
+    ],
+    "root_cause": "磁盘空间被占满。常见原因：日志文件过大、临时文件未清理、数据库数据增长、备份文件堆积、Docker镜像堆积。",
+    "solution": "1. 执行 df -h 查看各分区使用率\n2. 执行 du -sh /* | sort -rh | head -10 定位大目录\n3. 清理日志: find /var/log -name '*.log' -mtime +30 -delete\n4. 清理Docker: docker system prune -a\n5. 清理临时文件: rm -rf /tmp/*\n6. 配置日志轮转 logrotate\n7. 考虑扩容磁盘",
+    "severity": "medium",
+    "tags": ["disk", "storage", "system", "cleanup"]
+  },
+  {
+    "id": "FAULT-006",
+    "title": "JVM内存溢出(OOM)导致服务宕机",
+    "category": "Java应用",
+    "symptoms": [
+      "日志出现 'java.lang.OutOfMemoryError: Java heap space'",
+      "日志出现 'java.lang.OutOfMemoryError: Metaspace'",
+      "服务响应变慢后崩溃",
+      "GC日志显示Full GC频繁"
+    ],
+    "root_cause": "JVM堆内存不足或存在内存泄漏。常见原因：堆内存设置过小、存在内存泄漏(大对象未释放)、Metaspace类加载过多、线程栈溢出。",
+    "solution": "1. 分析Heap Dump: jmap -dump:format=b,file=heap.hprof <pid>\n2. 使用MAT或VisualVM分析内存泄漏\n3. 调整JVM参数: -Xmx4g -Xms4g -XX:MaxMetaspaceSize=512m\n4. 检查代码中的大对象创建和缓存\n5. 添加GC监控告警\n6. 考虑使用G1GC: -XX:+UseG1GC",
+    "severity": "high",
+    "tags": ["java", "jvm", "oom", "heap", "gc"]
+  },
+  {
+    "id": "FAULT-007",
+    "title": "网络连接超时(Connection Timeout)",
+    "category": "网络",
+    "symptoms": [
+      "日志出现 'Connection timed out'",
+      "日志出现 'SocketTimeoutException'",
+      "服务间调用超时",
+      "外部API调用失败"
+    ],
+    "root_cause": "网络连接建立超时。常见原因：目标服务不可达、防火墙规则阻止、DNS解析失败、网络拥塞、连接池耗尽。",
+    "solution": "1. 检查网络连通性: ping <target_host>\n2. 检查端口可达性: telnet <host> <port>\n3. 检查DNS解析: nslookup <domain>\n4. 检查防火墙规则: iptables -L\n5. 检查目标服务状态\n6. 调整超时参数和重试策略\n7. 检查网络带宽和延迟",
+    "severity": "medium",
+    "tags": ["network", "timeout", "connection", "firewall"]
+  },
+  {
+    "id": "FAULT-008",
+    "title": "消息队列积压导致处理延迟",
+    "category": "消息队列",
+    "symptoms": [
+      "消息队列监控显示积压量持续增长",
+      "消费者日志处理速度变慢",
+      "业务数据延迟",
+      "告警触发消息积压阈值"
+    ],
+    "root_cause": "消息消费速度跟不上生产速度。常见原因：消费者处理逻辑变慢、消费者数量不足、消费者异常退出、消息量突增、消费端阻塞。",
+    "solution": "1. 检查消费者状态和日志\n2. 增加消费者实例数量\n3. 优化消费逻辑，减少处理时间\n4. 检查是否有消费失败重试导致的阻塞\n5. 临时提高消费线程数\n6. 评估是否需要扩容\n7. 配置消费积压告警",
+    "severity": "medium",
+    "tags": ["mq", "kafka", "rabbitmq", "queue", "consumer"]
+  },
+  {
+    "id": "FAULT-009",
+    "title": "SSL/TLS证书过期导致HTTPS访问失败",
+    "category": "安全",
+    "symptoms": [
+      "浏览器提示证书过期警告",
+      "日志出现 'certificate has expired'",
+      "HTTPS请求失败",
+      "客户端报SSL握手错误"
+    ],
+    "root_cause": "SSL/TLS证书已过期或即将过期。常见原因：证书管理疏忽、自动续期失败、证书链不完整。",
+    "solution": "1. 检查证书有效期: openssl x509 -in cert.pem -noout -dates\n2. 使用Let's Encrypt自动续期: certbot renew\n3. 手动更新证书\n4. 配置证书过期监控告警(提前30天)\n5. 确保证书链完整(包含中间证书)\n6. 清除浏览器和CDN缓存",
+    "severity": "high",
+    "tags": ["ssl", "tls", "certificate", "https", "security"]
+  },
+  {
+    "id": "FAULT-010",
+    "title": "CPU使用率过高导致系统卡顿",
+    "category": "系统",
+    "symptoms": [
+      "top命令显示CPU使用率超过90%",
+      "系统响应变慢",
+      "负载均衡器报告健康检查失败",
+      "应用日志出现处理超时"
+    ],
+    "root_cause": "CPU资源被大量消耗。常见原因：死循环、频繁Full GC、大量计算任务、CPU密集型查询、线程死锁。",
+    "solution": "1. 使用top/htop查看CPU占用最高的进程\n2. 使用pidstat -p <pid> 1 查看线程CPU\n3. Java应用使用jstack分析线程状态\n4. 检查是否有死循环或GC问题\n5. 使用perf top分析热点函数\n6. 考虑优化代码或扩容\n7. 配置CPU使用率告警",
+    "severity": "medium",
+    "tags": ["cpu", "performance", "system", "thread"]
+  },
+  {
+    "id": "FAULT-011",
+    "title": "Elasticsearch集群状态RED",
+    "category": "搜索引擎",
+    "symptoms": [
+      "ES集群状态显示RED",
+      "部分分片未分配",
+      "写入操作失败",
+      "查询响应变慢或超时"
+    ],
+    "root_cause": "ES集群有主分片未分配。常见原因：节点宕机、磁盘空间不足、分片分配策略问题、集群脑裂。",
+    "solution": "1. 查看集群状态: GET _cluster/health\n2. 查看未分配分片: GET _cat/shards?v&h=index,shard,prirep,state,unassigned.reason\n3. 检查节点状态: GET _cat/nodes?v\n4. 检查磁盘空间: GET _cat/allocation?v\n5. 如节点宕机，重启节点\n6. 如磁盘满，清理空间或扩容\n7. 必要时手动分配分片: POST _cluster/reroute",
+    "severity": "high",
+    "tags": ["elasticsearch", "cluster", "shard", "red"]
+  },
+  {
+    "id": "FAULT-012",
+    "title": "Docker容器无法启动",
+    "category": "容器",
+    "symptoms": [
+      "docker start命令失败",
+      "日志显示端口已被占用",
+      "日志显示挂载卷不存在",
+      "容器启动后立即退出"
+    ],
+    "root_cause": "容器启动配置错误或环境问题。常见原因：端口冲突、挂载路径不存在、镜像损坏、资源限制、entrypoint脚本错误。",
+    "solution": "1. 查看容器日志: docker logs <container>\n2. 检查端口占用: netstat -tlnp | grep <port>\n3. 检查挂载卷: ls -la <mount_path>\n4. 检查镜像: docker inspect <image>\n5. 尝试交互式启动: docker run -it <image> /bin/bash\n6. 检查资源限制 ulimit\n7. 检查entrypoint脚本权限",
+    "severity": "medium",
+    "tags": ["docker", "container", "startup", "port"]
+  }
+]

@@ -1,0 +1,12 @@
+# 核心依赖
+openai>=1.0.0
+python-dotenv>=1.0.0
+
+# RAG相关
+chromadb>=0.4.0
+
+# Elasticsearch (可选)
+elasticsearch>=8.0.0
+
+# 工具库
+rich>=13.0.0
